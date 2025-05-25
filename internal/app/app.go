@@ -16,6 +16,7 @@ import (
 	"github.com/sst/opencode/internal/logging"
 	"github.com/sst/opencode/internal/lsp"
 	"github.com/sst/opencode/internal/message"
+	"github.com/sst/opencode/internal/messagehistory"
 	"github.com/sst/opencode/internal/permission"
 	"github.com/sst/opencode/internal/session"
 	"github.com/sst/opencode/internal/status"
@@ -28,6 +29,7 @@ type App struct {
 	Sessions       session.Service
 	Messages       message.Service
 	History        history.Service
+	MessageHistory messagehistory.Service
 	Permissions    permission.Service
 	Status         status.Service
 
@@ -40,9 +42,9 @@ type App struct {
 	watcherCancelFuncs []context.CancelFunc
 	cancelFuncsMutex   sync.Mutex
 	watcherWG          sync.WaitGroup
-	
+
 	// UI state
-	filepickerOpen bool
+	filepickerOpen       bool
 	completionDialogOpen bool
 }
 
@@ -77,6 +79,11 @@ func New(ctx context.Context, conn *sql.DB) (*App, error) {
 		slog.Error("Failed to initialize status service", "error", err)
 		return nil, err
 	}
+	err = messagehistory.InitService()
+	if err != nil {
+		slog.Error("Failed to initialize message history service", "error", err)
+		return nil, err
+	}
 	fileutil.Init()
 
 	app := &App{
@@ -85,6 +92,7 @@ func New(ctx context.Context, conn *sql.DB) (*App, error) {
 		Sessions:       session.GetService(),
 		Messages:       message.GetService(),
 		History:        history.GetService(),
+		MessageHistory: messagehistory.GetService(),
 		Permissions:    permission.GetService(),
 		Status:         status.GetService(),
 		LSPClients:     make(map[string]*lsp.Client),

@@ -25,22 +25,19 @@ import (
 )
 
 type editorCmp struct {
-	width          int
-	height         int
-	app            *app.App
-	textarea       textarea.Model
-	attachments    []message.Attachment
-	deleteMode     bool
-	history        []string
-	historyIndex   int
-	currentMessage string
+	width       int
+	height      int
+	app         *app.App
+	textarea    textarea.Model
+	attachments []message.Attachment
+	deleteMode  bool
 }
 
 type EditorKeyMaps struct {
-	Send       key.Binding
-	OpenEditor key.Binding
-	Paste      key.Binding
-	HistoryUp  key.Binding
+	Send        key.Binding
+	OpenEditor  key.Binding
+	Paste       key.Binding
+	HistoryUp   key.Binding
 	HistoryDown key.Binding
 }
 
@@ -153,13 +150,8 @@ func (m *editorCmp) send() tea.Cmd {
 	attachments := m.attachments
 
 	// Save to history if not empty and not a duplicate of the last entry
-	if value != "" {
-		if len(m.history) == 0 || m.history[len(m.history)-1] != value {
-			m.history = append(m.history, value)
-		}
-		m.historyIndex = len(m.history)
-		m.currentMessage = ""
-	}
+	m.app.MessageHistory.Add(value)
+	m.app.MessageHistory.Reset()
 
 	m.attachments = nil
 	if value == "" {
@@ -251,40 +243,27 @@ func (m *editorCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.textarea.Focused() && key.Matches(msg, editorMaps.HistoryUp) && !m.app.IsFilepickerOpen() && !m.app.IsCompletionDialogOpen() {
 			// Get the current line number
 			currentLine := m.textarea.Line()
-			
+
 			// Only navigate history if we're at the first line
-			if currentLine == 0 && len(m.history) > 0 {
-				// Save current message if we're just starting to navigate
-				if m.historyIndex == len(m.history) {
-					m.currentMessage = m.textarea.Value()
-				}
-				
-				// Go to previous message in history
-				if m.historyIndex > 0 {
-					m.historyIndex--
-					m.textarea.SetValue(m.history[m.historyIndex])
+			if currentLine == 0 && m.app.MessageHistory.Size() > 0 {
+				if historyMsg, ok := m.app.MessageHistory.NavigateUp(m.textarea.Value()); ok {
+					m.textarea.SetValue(historyMsg)
 				}
 				return m, nil
 			}
 		}
-		
+
 		if m.textarea.Focused() && key.Matches(msg, editorMaps.HistoryDown) && !m.app.IsFilepickerOpen() && !m.app.IsCompletionDialogOpen() {
 			// Get the current line number and total lines
 			currentLine := m.textarea.Line()
 			value := m.textarea.Value()
 			lines := strings.Split(value, "\n")
 			totalLines := len(lines)
-			
+
 			// Only navigate history if we're at the last line
 			if currentLine == totalLines-1 {
-				if m.historyIndex < len(m.history)-1 {
-					// Go to next message in history
-					m.historyIndex++
-					m.textarea.SetValue(m.history[m.historyIndex])
-				} else if m.historyIndex == len(m.history)-1 {
-					// Return to the current message being composed
-					m.historyIndex = len(m.history)
-					m.textarea.SetValue(m.currentMessage)
+				if historyMsg, ok := m.app.MessageHistory.NavigateDown(); ok {
+					m.textarea.SetValue(historyMsg)
 				}
 				return m, nil
 			}
@@ -403,10 +382,7 @@ func CreateTextArea(existing *textarea.Model) textarea.Model {
 func NewEditorCmp(app *app.App) tea.Model {
 	ta := CreateTextArea(nil)
 	return &editorCmp{
-		app:          app,
-		textarea:     ta,
-		history:      []string{},
-		historyIndex: 0,
-		currentMessage: "",
+		app:      app,
+		textarea: ta,
 	}
 }
