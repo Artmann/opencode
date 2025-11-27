@@ -12,7 +12,7 @@ func main() {
 	cmd.Execute()
 }
 
-func handleErrors2() {
+func handleErrors22() {
 	logging.RecoverPanic("main", func() {
 		status.Error("Application terminated due to unhandled panic.")
 	})
