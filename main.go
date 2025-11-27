@@ -8,7 +8,7 @@ import (
 
 func main() {
 	defer logging.RecoverPanic("main", func() {
-		status.Error("Application terminated due to unhandled panic")
+		status.Error("Application terminated due to unhandled panic.")
 	})
 
 	cmd.Execute()
