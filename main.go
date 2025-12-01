@@ -7,12 +7,12 @@ import (
 )
 
 func main() {
-	defer handleErrors2()
+	defer handleErrors5()
 
 	cmd.Execute()
 }
 
-func handleErrors22() {
+func handleErrors() {
 	logging.RecoverPanic("main", func() {
 		status.Error("Application terminated due to unhandled panic.")
 	})
